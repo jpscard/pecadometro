@@ -1,0 +1,39 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and aggregate stats",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "totalScore": { "type": "number" },
+        "lastUpdate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "displayName"]
+    },
+    "DailyLog": {
+      "title": "Daily Log",
+      "description": "Daily record of sins for a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "sins": { "type": "array", "items": { "type": "string" } },
+        "score": { "type": "number" }
+      },
+      "required": ["userId", "date", "sins", "score"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data"
+    },
+    "/logs/{logId}": {
+      "schema": "DailyLog",
+      "description": "Daily logs keyed by userId_YYYY-MM-DD"
+    }
+  }
+}

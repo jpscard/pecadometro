@@ -1,0 +1,5 @@
+{
+  "name": "Pecadômetro Diário",
+  "description": "Um sistema interativo para amigos marcarem e pontuarem pecados diários, com ranking e histórico.",
+  "requestFramePermissions": []
+}
