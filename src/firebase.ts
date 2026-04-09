@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, doc, getDoc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDocFromServer, getDocs, deleteDoc } from 'firebase/firestore';
 
 const firebaseConfig = {
   apiKey: "AIzaSyDNclxdx3skASo0RjOO29xADndY554om3Y",
@@ -18,7 +18,7 @@ export const auth = getAuth(app);
 
 export const googleProvider = new GoogleAuthProvider();
 
-export { signInWithPopup, signOut, doc, getDoc, setDoc, collection, query, where, orderBy, limit, onSnapshot };
+export { signInWithPopup, signOut, doc, getDoc, setDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, deleteDoc };
 
 async function testConnection() {
   try {

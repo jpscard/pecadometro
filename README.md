@@ -77,4 +77,6 @@ Este projeto foi desenvolvido com foco em portfólio de **Machine Learning Engin
 ---
 <div align="center">
   <sub>Pecadômetro Diário © 2026. Criado para reflexão e diversão entre amigos.</sub>
+  <br />
+  <sub><b>WLAD Philosophy:</b> Why? Logic Always Dies. 🛠️ (O mantra de todo debug às 3 da manhã)</sub>
 </div>

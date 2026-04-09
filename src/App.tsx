@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { auth, db, googleProvider, signInWithPopup, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, onSnapshot } from './firebase';
+import { auth, db, googleProvider, signInWithPopup, signOut, doc, setDoc, getDoc, collection, query, where, orderBy, limit, onSnapshot, getDocs, deleteDoc } from './firebase';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { SINS } from './constants';
 import { Button } from './components/ui/button';
@@ -123,6 +123,8 @@ export default function App() {
   const [leaderboard, setLeaderboard] = useState<UserProfile[]>([]);
   const [history, setHistory] = useState<DailyLog[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [activeTab, setActiveTab] = useState('daily');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
@@ -390,6 +392,30 @@ export default function App() {
     }
   };
 
+  const handleResetData = async () => {
+    if (!user) return;
+    setIsResetting(true);
+    try {
+      const q = query(
+        collection(db, 'daily_logs'),
+        where('userId', '==', user.uid)
+      );
+      const snapshot = await getDocs(q);
+      
+      const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+      await Promise.all(deletePromises);
+      
+      setHistory([]);
+      toast.success("Sua alma foi lavada! Histórico zerado com sucesso. ✨");
+      setShowResetDialog(false);
+    } catch (error) {
+      toast.error("Erro ao resetar dados. Tente novamente.");
+      handleFirestoreError(error, OperationType.DELETE, 'daily_logs');
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   const handleLogin = () => signInWithPopup(auth, googleProvider);
   const handleLogout = () => signOut(auth);
 
@@ -633,8 +659,8 @@ export default function App() {
                     </motion.span>
                     <span className="text-[9px] text-muted-foreground uppercase font-bold tracking-tight mt-0.5">Veredito Atual</span>
                   </div>
-                  <div className="bg-secondary px-3 py-1 rounded-lg border border-border flex items-center gap-1.5">
-                    <span className="text-sm font-black text-foreground">{selectedSins.length}</span>
+                  <div className="bg-secondary px-2 md:px-3 py-1 rounded-lg border border-border flex items-center gap-1 md:gap-1.5">
+                    <span className="text-xs md:text-sm font-black text-foreground">{selectedSins.length}</span>
                     <span className="text-[8px] font-black uppercase text-muted-foreground">pts</span>
                   </div>
                 </motion.div>
@@ -670,19 +696,19 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto p-4 md:p-8">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-          <div className="flex justify-center">
-            <TabsList className="bg-muted border border-border p-1">
-              <TabsTrigger value="daily" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2">
-                <CheckCircle2 className="w-4 h-4" /> Diário
+          <div className="flex justify-center w-full overflow-x-auto no-scrollbar pb-2">
+            <TabsList className="bg-muted border border-border p-1 h-auto flex-wrap sm:flex-nowrap justify-center">
+              <TabsTrigger value="daily" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2 text-[10px] sm:text-sm py-2">
+                <CheckCircle2 className="w-4 h-4" /> <span className="hidden xs:inline">Diário</span>
               </TabsTrigger>
-              <TabsTrigger value="stats" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2">
-                <BarChart3 className="w-4 h-4" /> Estatísticas
+              <TabsTrigger value="stats" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2 text-[10px] sm:text-sm py-2">
+                <BarChart3 className="w-4 h-4" /> <span className="hidden xs:inline">Estatísticas</span>
               </TabsTrigger>
-              <TabsTrigger value="leaderboard" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2">
-                <Trophy className="w-4 h-4" /> Ranking
+              <TabsTrigger value="leaderboard" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2 text-[10px] sm:text-sm py-2">
+                <Trophy className="w-4 h-4" /> <span className="hidden xs:inline">Ranking</span>
               </TabsTrigger>
-              <TabsTrigger value="history" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2">
-                <History className="w-4 h-4" /> Histórico
+              <TabsTrigger value="history" className="data-[state=active]:bg-orange-600 data-[state=active]:text-white gap-2 text-[10px] sm:text-sm py-2">
+                <History className="w-4 h-4" /> <span className="hidden xs:inline">Histórico</span>
               </TabsTrigger>
             </TabsList>
           </div>
@@ -691,14 +717,14 @@ export default function App() {
           <TabsContent value="daily" className="space-y-6">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               <div className="lg:col-span-2 space-y-6">
-                <div className="flex items-center justify-between bg-card p-6 rounded-2xl border border-border text-card-foreground shadow-2xl">
+                <div className="flex items-center justify-between bg-card p-4 md:p-6 rounded-2xl border border-border text-card-foreground shadow-2xl">
                   <div>
-                    <h2 className="text-3xl font-black uppercase italic tracking-tighter">Diário do Arrependimento</h2>
-                    <p className="text-muted-foreground font-mono text-xs uppercase tracking-widest mt-1">Sua jornada espiritual diária</p>
+                    <h2 className="text-xl md:text-3xl font-black uppercase italic tracking-tighter">Diário do Arrependimento</h2>
+                    <p className="text-muted-foreground font-mono text-[10px] md:text-xs uppercase tracking-widest mt-1">Sua jornada espiritual diária</p>
                   </div>
                   <div className="text-right hidden sm:block">
                     <div className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">Pontuação Hoje</div>
-                    <div className="text-4xl font-black text-orange-600">{selectedSins.length}</div>
+                    <div className="text-2xl md:text-4xl font-black text-orange-600">{selectedSins.length}</div>
                   </div>
                 </div>
 
@@ -1114,6 +1140,33 @@ export default function App() {
                       </ResponsiveContainer>
                     </div>
                   </Card>
+
+                  {/* Danger Zone */}
+                  <div className="mt-12 space-y-6">
+                    <div className="flex items-center gap-2 text-red-600 opacity-80">
+                      <AlertTriangle className="w-5 h-5" />
+                      <h2 className="text-xl font-black uppercase italic tracking-tighter">Zona de Perigo</h2>
+                    </div>
+                    
+                    <Card className="border-red-600/30 bg-red-600/5 backdrop-blur-xl overflow-hidden relative">
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-red-600/10 rounded-full blur-3xl -mr-16 -mt-16" />
+                      <CardHeader>
+                        <CardTitle className="text-lg font-bold text-red-500">Redenção Total</CardTitle>
+                        <CardDescription className="text-zinc-400">
+                          Apague todos os seus pecados e estatísticas permanentemente. Esta ação não pode ser desfeita.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <Button 
+                          variant="destructive" 
+                          className="font-black uppercase tracking-widest bg-red-600 hover:bg-red-700 text-white"
+                          onClick={() => setShowResetDialog(true)}
+                        >
+                          Zerar Todo meu Histórico
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </div>
               </div>
             )}
@@ -1181,7 +1234,10 @@ export default function App() {
             <Flame className="w-4 h-4" />
             <span className="font-black uppercase tracking-tighter text-sm italic">Pecadômetro</span>
           </div>
-          <p className="text-muted-foreground text-[10px] uppercase tracking-[0.2em]">
+          <p 
+            className="text-muted-foreground text-[10px] uppercase tracking-[0.2em] cursor-help transition-colors hover:text-orange-600"
+            title="W.L.A.D: Why? Logic Always Dies. (O mantra de todo debug às 3 da manhã)"
+          >
             Desenvolvido por um dos engenheiros do Wlad
           </p>
         </div>
@@ -1238,6 +1294,41 @@ export default function App() {
             </Button>
             <Button variant="ghost" className="w-full text-zinc-500" onClick={() => setShowSuccessModal(false)}>
               Fechar e Voltar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de Confirmação de Reset */}
+      <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+        <DialogContent className="max-w-md bg-card/90 backdrop-blur-2xl border-red-500/20 shadow-[0_0_50px_rgba(220,38,38,0.2)]">
+          <DialogHeader className="text-center space-y-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-red-600/20 flex items-center justify-center mb-2">
+              <AlertTriangle className="w-8 h-8 text-red-600" />
+            </div>
+            <DialogTitle className="text-2xl font-black uppercase italic tracking-tighter text-red-500">
+              Tem certeza absoluta?
+            </DialogTitle>
+            <DialogDescription className="text-zinc-400 font-medium">
+              Esta ação irá apagar permanentemente todos os seus registros de pecado, estatísticas e manchetes. Não há volta após a confirmação.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex-col sm:flex-col gap-3 mt-6">
+            <Button 
+              className="w-full bg-red-600 hover:bg-red-700 text-white font-black"
+              onClick={handleResetData}
+              disabled={isResetting}
+            >
+              {isResetting ? "LAVANDO A ALMA..." : "SIM, QUERO ZERAR TUDO"}
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="w-full text-zinc-500" 
+              onClick={() => setShowResetDialog(false)}
+              disabled={isResetting}
+            >
+              CANCELAR
             </Button>
           </DialogFooter>
         </DialogContent>
