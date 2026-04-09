@@ -117,6 +117,7 @@ const getLiveStatus = (score: number) => {
 };
 
 export default function App() {
+  const today = new Date().toISOString().split('T')[0];
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSins, setSelectedSins] = useState<string[]>([]);
@@ -135,8 +136,6 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastSavedSins, setLastSavedSins] = useState<string[]>([]);
-
-  const today = new Date().toISOString().split('T')[0];
 
   // ==========================================
   // DASHBOARD 2.0: Lógica de Filtragem e Heatmap
