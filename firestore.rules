@@ -31,8 +31,8 @@ service cloud.firestore {
       allow write: if isAuthenticated() && request.auth.uid == userId;
     }
 
-    match /logs/{logId} {
-      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    match /daily_logs/{logId} {
+      allow read, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.userId == request.auth.uid;
     }
