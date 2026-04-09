@@ -1127,7 +1127,7 @@ export default function App() {
                         <CardTitle className="text-sm font-bold">Bola de Cristal 🔮</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-3xl font-black mb-1">~{stats.prediction}</div>
+                        <div className="text-3xl font-black mb-1">~{stats?.prediction || '0.0'}</div>
                         <p className="text-[10px] text-muted-foreground flex items-center gap-1">
                           Pontos previstos para amanhã.
                         </p>
@@ -1144,12 +1144,12 @@ export default function App() {
                         <CardTitle className="text-sm font-bold">Radar de Surpresas 📡</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className={`text-3xl font-black mb-1 ${Math.abs(parseFloat(stats.zScore)) > 1.5 ? 'text-red-500' : 'text-green-500'}`}>
-                          {Math.abs(parseFloat(stats.zScore)) > 1.5 ? 'Fora da Curva!' : 'Na Normalidade'}
+                        <div className={`text-3xl font-black mb-1 ${Math.abs(parseFloat(stats?.zScore || '0')) > 1.5 ? 'text-red-500' : 'text-green-500'}`}>
+                          {Math.abs(parseFloat(stats?.zScore || '0')) > 1.5 ? 'Fora da Curva!' : 'Na Normalidade'}
                         </div>
                         <p className="text-[10px] text-muted-foreground">
-                          {Math.abs(parseFloat(stats.zScore)) > 1.5 
-                            ? `Você fugiu do padrão em ${stats.zScore} sigmas!` 
+                          {Math.abs(parseFloat(stats?.zScore || '0')) > 1.5 
+                            ? `Você fugiu do padrão em ${stats?.zScore} sigmas!` 
                             : 'Você está sendo consistente hoje.'}
                         </p>
                       </CardContent>
@@ -1165,7 +1165,7 @@ export default function App() {
                         <CardTitle className="text-sm font-bold">Personalidade Pecaminosa 🎭</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-black mb-1 text-purple-500">{stats.cluster}</div>
+                        <div className="text-2xl font-black mb-1 text-purple-500">{stats?.cluster || 'Estudando...'}</div>
                         <p className="text-[10px] text-muted-foreground">
                            Seu cluster principal baseado no histórico.
                         </p>
@@ -1184,8 +1184,8 @@ export default function App() {
                           <div>
                             <p className="text-xs text-muted-foreground uppercase font-bold">Média Diária</p>
                             <div className="flex items-baseline gap-2">
-                              <p className="text-2xl font-black">{stats.averageSins}</p>
-                              {timeRange !== 'all' && (
+                              <p className="text-2xl font-black">{stats?.averageSins || '0'}</p>
+                              {timeRange !== 'all' && stats && (
                                 <span className={`text-[10px] font-bold px-1 rounded ${
                                   parseFloat(stats.trend) <= 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'
                                 }`}>
@@ -1205,7 +1205,7 @@ export default function App() {
                           <div className="p-2 bg-red-600/20 rounded-lg"><TrendingUp className="w-5 h-5 text-red-600" /></div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase font-bold">Mais Comum</p>
-                            <p className="text-lg font-black truncate max-w-[120px]">{stats.mostCommonSin}</p>
+                            <p className="text-lg font-black truncate max-w-[120px]">{stats?.mostCommonSin || 'Nenhum'}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -1218,7 +1218,7 @@ export default function App() {
                           <div className="p-2 bg-amber-600/20 rounded-lg"><Calendar className="w-5 h-5 text-amber-600" /></div>
                           <div>
                             <p className="text-xs text-muted-foreground uppercase font-bold">Dias Ativos</p>
-                            <p className="text-2xl font-black">{stats.totalLogs}</p>
+                            <p className="text-2xl font-black">{stats?.totalLogs || '0'}</p>
                           </div>
                         </div>
                       </CardContent>
@@ -1250,7 +1250,7 @@ export default function App() {
                     </CardHeader>
                     <div className="h-[300px] w-full mt-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={getStatsForRange(filteredHistory).evolution}>
+                        <AreaChart data={getStatsForRange(filteredHistory)?.evolution || []}>
                           <defs>
                             <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
@@ -1310,7 +1310,7 @@ export default function App() {
                     </CardHeader>
                     <div className="h-[300px] w-full mt-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={getStatsForRange(filteredHistory).topSins} layout="vertical">
+                        <BarChart data={getStatsForRange(filteredHistory)?.topSins || []} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
                           <XAxis type="number" hide />
                           <YAxis 
@@ -1325,7 +1325,7 @@ export default function App() {
                             contentStyle={{ backgroundColor: 'rgba(0,0,0,0.8)', border: '1px solid #444', borderRadius: '8px' }}
                           />
                           <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                            {stats.topSins.map((_, index) => (
+                            {(getStatsForRange(filteredHistory)?.topSins || []).map((_, index) => (
                               <Cell key={`cell-${index}`} fill={index === 0 ? '#ea580c' : '#f97316'} />
                             ))}
                           </Bar>
