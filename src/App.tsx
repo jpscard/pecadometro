@@ -125,6 +125,7 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [showResetDialog, setShowResetDialog] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState('daily');
   const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
@@ -241,12 +242,14 @@ export default function App() {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-      if (u) {
-        syncUser(u);
-        loadTodayLog(u.uid);
-        loadHistory(u.uid);
+      if (!isDemo) {
+        setUser(u);
+        setLoading(false);
+        if (u) {
+          syncUser(u);
+          loadTodayLog(u.uid);
+          loadHistory(u.uid);
+        }
       }
     });
     return () => unsubscribe();
@@ -264,6 +267,7 @@ export default function App() {
   }, []);
 
   const syncUser = async (u: FirebaseUser) => {
+    if (isDemo) return;
     const userRef = doc(db, 'users', u.uid);
     try {
       const userDoc = await getDoc(userRef);
@@ -282,6 +286,7 @@ export default function App() {
   };
 
   const loadTodayLog = async (uid: string) => {
+    if (isDemo) return;
     const logId = `${uid}_${today}`;
     const logRef = doc(db, 'logs', logId);
     try {
@@ -295,6 +300,7 @@ export default function App() {
   };
 
   const loadHistory = (uid: string) => {
+    if (isDemo) return;
     // Busca logs apenas do usuário logado diretamente no Firestore
     const q = query(
       collection(db, 'logs'), 
@@ -334,42 +340,51 @@ export default function App() {
       const synthesis = generateSynthesis(selectedSins);
       // Save log
       await setDoc(logRef, {
+      const log = {
         userId: user.uid,
         date: today,
         sins: selectedSins,
         score: score,
         synthesis: synthesis
-      });
+      };
 
-      step = "Atualizando seu placar (users)...";
-      // Update total score
-      const userRef = doc(db, 'users', user.uid);
-      const userDoc = await getDoc(userRef);
-      if (userDoc.exists()) {
-        const currentData = userDoc.data();
-        const scoreDiff = score - oldScore;
-        await setDoc(userRef, {
-          ...currentData,
-          totalScore: (currentData.totalScore || 0) + scoreDiff,
-          lastUpdate: new Date().toISOString()
-        }, { merge: true });
+      if (!isDemo) {
+        step = "Consultando registro anterior...";
+        const logRef = doc(db, 'logs', logId);
+        const logDoc = await getDoc(logRef);
+        const oldScore = logDoc.exists() ? logDoc.data().score : 0;
+
+        step = "Gravando pecados no bando (logs)...";
+        await setDoc(logRef, log);
+
+        step = "Atualizando seu placar (users)...";
+        const userRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userRef);
+        if (userDoc.exists()) {
+          const currentData = userDoc.data();
+          const scoreDiff = score - oldScore;
+          await setDoc(userRef, {
+            ...currentData,
+            totalScore: (currentData.totalScore || 0) + scoreDiff,
+            lastUpdate: new Date().toISOString()
+          }, { merge: true });
+        } else {
+          await setDoc(userRef, {
+            uid: user.uid,
+            displayName: user.displayName || 'Anônimo',
+            photoURL: user.photoURL || '',
+            totalScore: score,
+            lastUpdate: new Date().toISOString()
+          });
+        }
       } else {
-        // Se o usuário não existir na coleção, cria ele
-        await setDoc(userRef, {
-          uid: user.uid,
-          displayName: user.displayName || 'Anônimo',
-          photoURL: user.photoURL || '',
-          totalScore: score,
-          lastUpdate: new Date().toISOString()
-        });
+        setHistory(prev => [log, ...prev.filter(l => l.date !== today)]);
       }
+
       toast.success("Pecados registrados com sucesso!");
-      
-      // Armazena dados para o modal
       setLastSavedSins([...selectedSins]);
       setShowSuccessModal(true);
 
-      // Efeitos Dinâmicos de Sucesso
       confetti({
         particleCount: 150,
         spread: 70,
@@ -378,8 +393,6 @@ export default function App() {
       });
 
       setSelectedSins([]);
-      
-      // Troca para o histórico após um pequeno delay para o usuário sentir o sucesso
       setTimeout(() => {
         setActiveTab('history');
       }, 1000);
@@ -394,6 +407,12 @@ export default function App() {
 
   const handleResetData = async () => {
     if (!user) return;
+    if (isDemo) {
+      setHistory([]);
+      toast.success("Alma lavada (em modo demonstração)! ✨");
+      setShowResetDialog(false);
+      return;
+    }
     setIsResetting(true);
     try {
       const q = query(
@@ -416,8 +435,56 @@ export default function App() {
     }
   };
 
-  const handleLogin = () => signInWithPopup(auth, googleProvider);
-  const handleLogout = () => signOut(auth);
+  const handleLogin = () => {
+    setIsDemo(false);
+    signInWithPopup(auth, googleProvider);
+  };
+  
+  const handleLogout = () => {
+    setIsDemo(false);
+    setUser(null);
+    signOut(auth);
+  };
+
+  const handleDemoLogin = () => {
+    const mockUser = {
+      uid: 'demo-user-' + Math.random().toString(36).substr(2, 9),
+      displayName: 'Engenheiro do Wlad (Guest)',
+      photoURL: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Wlad'
+    } as FirebaseUser;
+    
+    const mockHistory: DailyLog[] = [];
+    const syntheses = [
+      "Quase um monge, mas a preguiça falou mais alto.",
+      "O dia estava indo bem até o chocolate aparecer.",
+      "Orgulho em dia, alma em perigo. Cuidado.",
+      "A língua foi mais rápida que o cérebro hoje.",
+      "Santidade? Passou longe, mas a intenção foi boa."
+    ];
+
+    for (let i = 7; i > 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const randomSinsCount = Math.floor(Math.random() * 4) + 1;
+      const shuffledSins = [...SINS].sort(() => 0.5 - Math.random());
+      const selectedSinsForDay = shuffledSins.slice(0, randomSinsCount).map(s => s.name);
+      
+      mockHistory.push({
+        userId: mockUser.uid,
+        date: dateStr,
+        sins: selectedSinsForDay,
+        score: selectedSinsForDay.length,
+        synthesis: syntheses[Math.floor(Math.random() * syntheses.length)]
+      });
+    }
+
+    setIsDemo(true);
+    setUser(mockUser);
+    setHistory(mockHistory);
+    toast.info("Modo Demonstração Ativado! Divirta-se (sem pecados reais). ✨");
+  };
 
   if (loading) {
     return (
@@ -435,7 +502,6 @@ export default function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-background text-foreground selection:bg-orange-600 selection:text-white font-sans overflow-x-hidden">
-        {/* Navbar Simplificada da Landing */}
         <nav className="fixed top-0 left-0 right-0 h-20 z-50 bg-background/60 backdrop-blur-md border-b border-border/10">
           <div className="max-w-7xl mx-auto px-6 h-full flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -446,7 +512,7 @@ export default function App() {
               <ThemeToggle />
               <Button 
                 onClick={handleLogin}
-                className="bg-orange-600 hover:bg-orange-700 text-white font-black px-8 py-6 rounded-full shadow-[0_5px_20px_rgba(234,88,12,0.3)] transition-transform hover:scale-105 active:scale-95"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-black px-6 sm:px-8 py-4 sm:py-6 rounded-full shadow-[0_5px_20px_rgba(234,88,12,0.3)] transition-transform hover:scale-105 active:scale-95 text-xs sm:text-base"
               >
                 ENTRAR
               </Button>
