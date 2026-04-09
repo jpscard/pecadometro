@@ -328,22 +328,15 @@ export default function App() {
     setIsSaving(true);
     let step = "Iniciando...";
     try {
+    try {
       const logId = `${user.uid}_${today}`;
       const score = selectedSins.length;
-      
-      step = "Consultando registro anterior...";
-      const logRef = doc(db, 'logs', logId);
-      const logDoc = await getDoc(logRef);
-      const oldScore = logDoc.exists() ? logDoc.data().score : 0;
-
-      step = "Gravando pecados no bando (logs)...";
       const synthesis = generateSynthesis(selectedSins);
-      // Save log
-      await setDoc(logRef, {
-      const log = {
+
+      const log: DailyLog = {
         userId: user.uid,
         date: today,
-        sins: selectedSins,
+        sins: selectedSins as string[],
         score: score,
         synthesis: synthesis
       };
