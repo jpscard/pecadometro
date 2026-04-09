@@ -184,7 +184,7 @@ export default function App() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
           <div className="space-y-1">
             <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
-              <CalendarIcon className="w-4 h-4 text-orange-600" />
+              <Calendar className="w-4 h-4 text-orange-600" />
               Mapa de Calor da Infâmia
             </h3>
             <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Registro espiritual dos últimos 365 dias</p>
