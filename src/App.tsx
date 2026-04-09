@@ -397,7 +397,7 @@ export default function App() {
     setIsResetting(true);
     try {
       const q = query(
-        collection(db, 'daily_logs'),
+        collection(db, 'logs'),
         where('userId', '==', user.uid)
       );
       const snapshot = await getDocs(q);
