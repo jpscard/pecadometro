@@ -568,13 +568,21 @@ export default function App() {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.6 }}
-              className="flex flex-col sm:flex-row gap-4 pt-4"
+              className="flex flex-col sm:flex-row gap-4 pt-4 w-full sm:w-auto"
             >
               <Button 
                 onClick={handleLogin}
-                className="bg-orange-600 hover:bg-orange-700 text-white font-black px-12 py-8 text-xl rounded-2xl shadow-[0_10px_40px_rgba(234,88,12,0.4)] transition-all hover:-translate-y-1"
+                className="w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white font-black px-12 py-8 text-xl rounded-2xl shadow-[0_10px_40px_rgba(234,88,12,0.4)] transition-all hover:-translate-y-1"
               >
                 COMEÇAR MINHA CONFISSÃO
+              </Button>
+              
+              <Button 
+                onClick={handleDemoLogin}
+                variant="outline"
+                className="w-full sm:w-auto border-2 border-orange-600/30 hover:border-orange-600 text-orange-600 font-bold px-10 py-8 text-lg rounded-2xl transition-all hover:bg-orange-600/5 hover:-translate-y-1"
+              >
+                MODO DEMONSTRAÇÃO
               </Button>
             </motion.div>
           </div>
