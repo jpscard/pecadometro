@@ -451,31 +451,42 @@ export default function App() {
       "O dia estava indo bem até o chocolate aparecer.",
       "Orgulho em dia, alma em perigo. Cuidado.",
       "A língua foi mais rápida que o cérebro hoje.",
-      "Santidade? Passou longe, mas a intenção foi boa."
+      "Santidade? Passou longe, mas a intenção foi boa.",
+      "Engenharia do Wlad em ação: lógica morreu, mas o código rodou.",
+      "Um dia de pura paz interior (ou apenas falta de café).",
+      "Pecados leves, consciência pesada.",
+      "Hoje o arquétipo mudou para 'Caótico Neutro'.",
+      "Equilíbrio precário entre a luz e as notificações do celular."
     ];
 
-    for (let i = 7; i > 0; i--) {
+    // Gerar 365 dias de histórico fake
+    for (let i = 365; i > 0; i--) {
       const date = new Date();
       date.setDate(date.getDate() - i);
       const dateStr = date.toISOString().split('T')[0];
       
-      const randomSinsCount = Math.floor(Math.random() * 4) + 1;
-      const shuffledSins = [...SINS].sort(() => 0.5 - Math.random());
-      const selectedSinsForDay = shuffledSins.slice(0, randomSinsCount).map(s => s.name);
+      // Simular variações: alguns períodos com mais pecados, outros com menos
+      const seasonalFactor = Math.sin(i / 10) * 2; // Cria ondas de comportamento
+      const baseSins = Math.max(0, Math.floor(Math.random() * 3) + 1 + Math.floor(seasonalFactor));
       
-      mockHistory.push({
-        userId: mockUser.uid,
-        date: dateStr,
-        sins: selectedSinsForDay,
-        score: selectedSinsForDay.length,
-        synthesis: syntheses[Math.floor(Math.random() * syntheses.length)]
-      });
+      const shuffledSins = [...SINS].sort(() => 0.5 - Math.random());
+      const selectedSinsForDay = shuffledSins.slice(0, baseSins).map(s => s.name);
+      
+      if (selectedSinsForDay.length > 0) {
+        mockHistory.push({
+          userId: mockUser.uid,
+          date: dateStr,
+          sins: selectedSinsForDay,
+          score: selectedSinsForDay.length,
+          synthesis: syntheses[Math.floor(Math.random() * syntheses.length)]
+        });
+      }
     }
 
     setIsDemo(true);
     setUser(mockUser);
-    setHistory(mockHistory);
-    toast.info("Modo Demonstração Ativado! Divirta-se (sem pecados reais). ✨");
+    setHistory(mockHistory.reverse()); // Recentes primeiro
+    toast.info("Modo Demonstração Turbinado! 1 ano de dados gerados. ✨");
   };
 
   if (loading) {
