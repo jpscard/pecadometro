@@ -328,7 +328,6 @@ export default function App() {
     setIsSaving(true);
     let step = "Iniciando...";
     try {
-    try {
       const logId = `${user.uid}_${today}`;
       const score = selectedSins.length;
       const synthesis = generateSynthesis(selectedSins);
