@@ -32,10 +32,10 @@ service cloud.firestore {
     }
 
     match /logs/{logId} {
-      // Permite ler se o documento for seu OU se o ID começar com seu UID (para verificar existência)
+      // Permite ler se o documento for seu OU se o ID começar com seu UID (usando regex)
       allow read: if isAuthenticated() && (
         (resource != null && resource.data.userId == request.auth.uid) ||
-        (resource == null && logId.startsWith(request.auth.uid))
+        (resource == null && logId.matches('^' + request.auth.uid + '.*'))
       );
       
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
