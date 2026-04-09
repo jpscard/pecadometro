@@ -127,28 +127,113 @@ export default function App() {
   const [isResetting, setIsResetting] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
   const [activeTab, setActiveTab] = useState('daily');
-  const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all'>('7d');
+  const [timeRange, setTimeRange] = useState<'7d' | '30d' | 'all' | 'custom'>('7d');
+  const [customStartDate, setCustomStartDate] = useState<string>(
+    new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  );
+  const [customEndDate, setCustomEndDate] = useState<string>(today);
   const [selectedCategory, setSelectedCategory] = useState<string>('Todos');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [lastSavedSins, setLastSavedSins] = useState<string[]>([]);
 
   const today = new Date().toISOString().split('T')[0];
 
-  // Cálculos de Estatísticas (Dashboard - ML Engine)
-  const stats = (() => {
-    if (history.length === 0) return null;
+  // ==========================================
+  // DASHBOARD 2.0: Lógica de Filtragem e Heatmap
+  // ==========================================
+  const getFilteredHistory = () => {
+    if (timeRange === '7d') {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 7);
+      return history.filter(log => new Date(log.date) >= limit);
+    }
+    if (timeRange === '30d') {
+      const limit = new Date();
+      limit.setDate(limit.getDate() - 30);
+      return history.filter(log => new Date(log.date) >= limit);
+    }
+    if (timeRange === 'custom') {
+      return history.filter(log => log.date >= customStartDate && log.date <= customEndDate);
+    }
+    return history;
+  };
 
-    const now = new Date();
-    const parseDate = (d: string) => new Date(d);
+  const filteredHistory = getFilteredHistory();
 
-    // Filtrar por Período
-    const filteredByRange = history.filter(log => {
-      if (timeRange === 'all') return true;
-      const daysDiff = (now.getTime() - parseDate(log.date).getTime()) / (1000 * 3600 * 24);
-      return timeRange === '7d' ? daysDiff <= 7 : daysDiff <= 30;
+  const InfamyHeatmap = () => {
+    const days = 365;
+    const historyMap = new Map(history.map(log => [log.date, log.score]));
+    const calendarDays = Array.from({ length: days }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (days - 1 - i));
+      const dateStr = date.toISOString().split('T')[0];
+      const score = historyMap.get(dateStr) || 0;
+      return { date: dateStr, score };
     });
 
+    const getColor = (score: number) => {
+      if (score === 0) return 'bg-zinc-800/40';
+      if (score === 1) return 'bg-orange-950/40 border border-orange-500/10';
+      if (score <= 3) return 'bg-orange-800/60 border border-orange-500/20';
+      if (score <= 5) return 'bg-orange-600/80 border border-orange-500/30';
+      return 'bg-orange-500 shadow-[0_0_15px_rgba(234,88,12,0.3)] border border-orange-400/50';
+    };
+
+    return (
+      <div className="bg-card/30 backdrop-blur-3xl p-4 md:p-6 rounded-[2rem] border border-border/50 mb-10 overflow-hidden relative group">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-black uppercase tracking-widest text-foreground flex items-center gap-2">
+              <CalendarIcon className="w-4 h-4 text-orange-600" />
+              Mapa de Calor da Infâmia
+            </h3>
+            <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-tight">Registro espiritual dos últimos 365 dias</p>
+          </div>
+          <div className="flex items-center gap-2 text-[9px] font-black text-zinc-500 uppercase tracking-widest bg-muted/30 px-3 py-1.5 rounded-full border border-border/50">
+            <span>Puro</span>
+            <div className="flex gap-1 mx-1">
+              {[0, 1, 3, 5, 8].map(s => (
+                <div key={s} className={`w-2 h-2 md:w-2.5 md:h-2.5 rounded-sm ${getColor(s)}`} />
+              ))}
+            </div>
+            <span>Pecador</span>
+          </div>
+        </div>
+        <div className="overflow-x-auto pb-4 scrollbar-hide">
+          <div className="flex flex-wrap gap-1 md:gap-1.5 min-w-[750px] content-start">
+            {calendarDays.map((day, i) => (
+              <div key={i} className="group relative">
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.5 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: i * 0.0005 }}
+                  className={`w-2.5 h-2.5 md:w-3.5 md:h-3.5 rounded-[2px] md:rounded-[3px] transition-all hover:scale-150 hover:z-20 cursor-help ${getColor(day.score)}`}
+                />
+                
+                {/* Tooltip Customizado (CSS Puro) */}
+                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-28 p-2 bg-zinc-900/95 backdrop-blur-xl border border-white/10 rounded-lg shadow-2xl opacity-0 group-hover:opacity-100 pointer-events-none transition-all z-50 origin-bottom scale-90 group-hover:scale-100">
+                  <div className="text-center">
+                    <p className="font-black text-[8px] uppercase tracking-tighter text-zinc-400">
+                      {new Date(day.date).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}
+                    </p>
+                    <p className="text-lg font-black text-orange-500 leading-none my-0.5">{day.score}</p>
+                    <p className="text-[7px] uppercase font-bold opacity-50 tracking-widest text-white">Pecados</p>
+                  </div>
+                  {/* Seta do Tooltip */}
+                  <div className="absolute top-full left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-zinc-900 border-r border-b border-white/10 rotate-45 -mt-[4px]" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  const getStatsForRange = (filteredByRange: DailyLog[]) => {
     if (filteredByRange.length === 0) return null;
+    const now = new Date();
+    const parseDate = (d: string) => new Date(d);
 
     // Evolução por data (ordenado)
     const sortedHistory = [...filteredByRange].sort((a, b) => a.date.localeCompare(b.date));
@@ -238,7 +323,9 @@ export default function App() {
       zScore: zScore.toFixed(2),
       cluster: dominantCluster
     };
-  })();
+  };
+
+  const stats = getStatsForRange(filteredHistory);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => {
@@ -965,35 +1052,64 @@ export default function App() {
 
           {/* Dashboard de Estatísticas */}
           <TabsContent value="stats">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
-              <div>
-                <h2 className="text-2xl font-black uppercase tracking-tight italic">Análise de Série Temporal</h2>
-                <p className="text-muted-foreground text-sm">Visualize tendências e padrões de comportamento.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black uppercase tracking-tight italic leading-none">Radiografia da Alma</h2>
+                <p className="text-muted-foreground text-xs font-bold uppercase tracking-widest opacity-70">Auditoria temporal e padrões de comportamento</p>
               </div>
-              <div className="flex bg-muted/50 p-1 rounded-lg border border-border">
-                {[
-                  { id: '7d', label: '7 Dias' },
-                  { id: '30d', label: '30 Dias' },
-                  { id: 'all', label: 'Tudo' }
-                ].map((range) => (
-                  <button
-                    key={range.id}
-                    onClick={() => setTimeRange(range.id as any)}
-                    className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${
-                      timeRange === range.id 
-                        ? 'bg-orange-600 text-white shadow-lg' 
-                        : 'hover:bg-muted text-muted-foreground'
-                    }`}
+              
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto">
+                <div className="flex bg-muted/30 p-1 rounded-2xl border border-border/50 w-full sm:w-auto">
+                  {(['7d', '30d', 'all', 'custom'] as const).map((range) => (
+                    <button
+                      key={range}
+                      onClick={() => setTimeRange(range)}
+                      className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                        timeRange === range 
+                          ? 'bg-orange-600 text-white shadow-lg shadow-orange-600/30' 
+                          : 'hover:bg-muted text-muted-foreground'
+                      }`}
+                    >
+                      {range === '7d' ? '7 Dias' : range === '30d' ? '30 Dias' : range === 'all' ? 'Tudo' : 'Personalizado'}
+                    </button>
+                  ))}
+                </div>
+
+                {timeRange === 'custom' && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="flex items-center gap-2 bg-card/60 backdrop-blur-xl p-1.5 rounded-2xl border border-orange-500/30 w-full sm:w-auto overflow-hidden"
                   >
-                    {range.label}
-                  </button>
-                ))}
+                    <input 
+                      type="date" 
+                      value={customStartDate}
+                      onChange={(e) => setCustomStartDate(e.target.value)}
+                      className="bg-transparent text-[10px] font-black uppercase px-2 outline-none text-foreground"
+                    />
+                    <div className="w-px h-4 bg-border/50" />
+                    <input 
+                      type="date" 
+                      value={customEndDate}
+                      onChange={(e) => setCustomEndDate(e.target.value)}
+                      className="bg-transparent text-[10px] font-black uppercase px-2 outline-none text-foreground"
+                    />
+                  </motion.div>
+                )}
               </div>
             </div>
 
-            {!stats ? (
-              <div className="text-center py-20 bg-card/20 rounded-2xl border border-dashed border-border text-muted-foreground">
-                Dados insuficientes para este período. Registre mais pecados!
+            <InfamyHeatmap />
+
+            {filteredHistory.length === 0 ? (
+              <div className="text-center py-32 bg-card/20 rounded-[3rem] border-2 border-dashed border-border/50 flex flex-col items-center justify-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">
+                  <FlameIcon className="w-8 h-8 text-zinc-600" />
+                </div>
+                <div>
+                   <p className="text-lg font-black uppercase italic tracking-tighter">Caminho da Pureza</p>
+                   <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">Nenhum registro para este intervalo</p>
+                </div>
               </div>
             ) : (
               <div className="space-y-8">
@@ -1134,7 +1250,7 @@ export default function App() {
                     </CardHeader>
                     <div className="h-[300px] w-full mt-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={stats.evolution}>
+                        <AreaChart data={getStatsForRange(filteredHistory).evolution}>
                           <defs>
                             <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                               <stop offset="5%" stopColor="#ea580c" stopOpacity={0.3}/>
@@ -1194,7 +1310,7 @@ export default function App() {
                     </CardHeader>
                     <div className="h-[300px] w-full mt-4">
                       <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={stats.topSins} layout="vertical">
+                        <BarChart data={getStatsForRange(filteredHistory).topSins} layout="vertical">
                           <CartesianGrid strokeDasharray="3 3" stroke="#333" horizontal={false} />
                           <XAxis type="number" hide />
                           <YAxis 
@@ -1251,13 +1367,20 @@ export default function App() {
 
           {/* History */}
           <TabsContent value="history">
+            <div className="flex flex-col md:flex-row items-start md:items-end justify-between gap-6 mb-10">
+              <div className="space-y-1">
+                <h2 className="text-3xl font-black uppercase italic tracking-tighter">Diário da Infâmia</h2>
+                <p className="text-sm text-muted-foreground font-medium uppercase tracking-tight">Linha do tempo dos registros filtrados</p>
+              </div>
+            </div>
+
             <div className="relative pl-8 space-y-12 before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-[2px] before:bg-gradient-to-b before:from-orange-600 before:via-orange-600/20 before:to-transparent">
-              {history.length === 0 ? (
-                <div className="text-center py-20 text-zinc-500">
-                  Nenhum histórico encontrado ainda. Comece hoje!
+              {filteredHistory.length === 0 ? (
+                <div className="text-center py-20 text-zinc-500 font-bold uppercase tracking-widest text-xs italic bg-card/20 rounded-[2rem] border-2 border-dashed border-border/50">
+                  Nenhum pecado neste intervalo. Glória!
                 </div>
               ) : (
-                history.map((log, idx) => (
+                filteredHistory.sort((a,b) => b.date.localeCompare(a.date)).map((log, idx) => (
                   <motion.div
                     key={idx}
                     initial={{ opacity: 0, x: -20 }}
